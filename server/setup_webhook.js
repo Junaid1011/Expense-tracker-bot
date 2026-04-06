@@ -1,8 +1,12 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Automatically load the root .env
-dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Automatically load the root .env securely regardless of the terminal folder
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const WEBHOOK_URL = process.argv[2]; // Passed from terminal command
