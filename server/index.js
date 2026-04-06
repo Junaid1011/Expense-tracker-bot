@@ -70,6 +70,24 @@ async function handleMessage(message) {
       return sendMessage(chatId, '🔒 You must link your account first! Generate a code in the dashboard and type:\n`/link CODE`');
     }
 
+    // 3.5 Check and Enforce Rate Limits
+    const todayStr = new Date().toISOString().split('T')[0];
+    let dailyUsage = linkedUser.daily_requests || 0;
+    
+    if (linkedUser.last_request_date !== todayStr) {
+      dailyUsage = 0; // Reset upon new day
+    }
+
+    // Hard Stop at 5 messages per day
+    if (dailyUsage >= 5) {
+      return sendMessage(chatId, "⚠️ Bhai tera aaj ka quota (5/5 messages) khatam ho gaya! Kal aana naye kharche ke sath. 💸");
+    }
+
+    // Immediately increment to safely block multi-message spam bursts from breaking the limit
+    await supabase.from('telegram_users')
+      .update({ daily_requests: dailyUsage + 1, last_request_date: todayStr })
+      .eq('telegram_id', chatId);
+
     // 4. Send to Gemini
     const { intent, amount, category, merchant, month, reply_template } = await parseIntent(text);
     const userId = linkedUser.user_id;
