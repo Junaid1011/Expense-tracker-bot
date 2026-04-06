@@ -185,33 +185,7 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-// 2. Long Polling Route (For Local Development without NGrok/LocalTunnel)
-async function startPolling() {
-  console.log("🧹 Clearing active Webhooks to activate Local Polling...");
-  await fetch(`${TELEGRAM_API}/deleteWebhook`);
-  
-  console.log("📡 Telegram Local Polling Activated! No localtunnel or ngrok required.");
-  let lastUpdateId = 0;
-  
-  setInterval(async () => {
-    try {
-      const res = await fetch(`${TELEGRAM_API}/getUpdates?offset=${lastUpdateId + 1}&timeout=5`);
-      const data = await res.json();
-      
-      if (data.ok && data.result.length > 0) {
-        for (const update of data.result) {
-          lastUpdateId = Math.max(lastUpdateId, update.update_id);
-          if (update.message && update.message.text) {
-            console.log(`📩 Incoming: ${update.message.text}`);
-            await handleMessage(update.message);
-          }
-        }
-      }
-    } catch (e) { } // Ignore timeout errors natively
-  }, 2000);
-}
-
-startPolling();
+// 2. Eradicated local polling. We rely strictly on verified Webhooks for production!
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
