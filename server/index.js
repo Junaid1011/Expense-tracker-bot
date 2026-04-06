@@ -1,10 +1,14 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { supabase } from './supabase.js';
 import { parseIntent } from './gemini.js';
 
-dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
 app.use(express.json());
@@ -29,6 +33,11 @@ async function handleMessage(message) {
   const text = message.text.trim();
 
   try {
+    // 0. Handle /start command
+    if (text === '/start') {
+      return sendMessage(chatId, '👋 Welcome to *Kharchaa Bhai!* 💸\n\nI help you track your expenses right from Telegram.\n\n🔗 First, link your account:\n1. Go to your Expense Tracker dashboard\n2. Generate a linking code\n3. Send me: `/link YOUR_CODE`\n\nThen just tell me about your expenses naturally!\nExample: "Spent 200 on Coffee ☕"');
+    }
+
     // 1. Check if user is linked
     const { data: linkedUser } = await supabase
       .from('telegram_users')
@@ -69,24 +78,6 @@ async function handleMessage(message) {
     if (!linkedUser) {
       return sendMessage(chatId, '🔒 You must link your account first! Generate a code in the dashboard and type:\n`/link CODE`');
     }
-
-    // 3.5 Check and Enforce Rate Limits
-    const todayStr = new Date().toISOString().split('T')[0];
-    let dailyUsage = linkedUser.daily_requests || 0;
-    
-    if (linkedUser.last_request_date !== todayStr) {
-      dailyUsage = 0; // Reset upon new day
-    }
-
-    // Hard Stop at 5 messages per day
-    if (dailyUsage >= 5) {
-      return sendMessage(chatId, "⚠️ Bhai tera aaj ka quota (5/5 messages) khatam ho gaya! Kal aana naye kharche ke sath. 💸");
-    }
-
-    // Immediately increment to safely block multi-message spam bursts from breaking the limit
-    await supabase.from('telegram_users')
-      .update({ daily_requests: dailyUsage + 1, last_request_date: todayStr })
-      .eq('telegram_id', chatId);
 
     // 4. Send to Gemini
     const { intent, amount, category, merchant, month, reply_template } = await parseIntent(text);
@@ -201,6 +192,15 @@ app.post('/webhook', async (req, res) => {
   if (req.body?.message?.text) {
     await handleMessage(req.body.message);
   }
+});
+
+// Health check endpoint
+app.get('/webhook', (req, res) => {
+  res.json({ status: 'ok', bot: 'Kharchaa Bhai is alive! 💸' });
+});
+
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', service: 'ExpenseIQ Telegram Bot' });
 });
 
 // 2. Eradicated local polling. We rely strictly on verified Webhooks for production!

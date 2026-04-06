@@ -54,6 +54,10 @@ create policy "Users can manage own telegram account"
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+-- Phase 4: Rate Limiting Constraints
+ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS daily_requests INT DEFAULT 0;
+ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS last_request_date DATE DEFAULT CURRENT_DATE;
+
 -- 4. Create `telegram_link_codes` table
 create table if not exists public.telegram_link_codes (
   id uuid default uuid_generate_v4() primary key,
