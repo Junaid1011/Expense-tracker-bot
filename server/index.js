@@ -74,6 +74,10 @@ async function handleMessage(message) {
     const { intent, amount, category, merchant, month, reply_template } = await parseIntent(text);
     const userId = linkedUser.user_id;
 
+    if (intent === 'add_note') {
+      return sendMessage(chatId, reply_template || `Noted bhai, yaad rakha 📌`);
+    }
+
     if (intent === 'add_expense' || intent === 'add_income') {
       if (!amount || amount <= 0) return sendMessage(chatId, '⚠️ Sahi amount likhein / Please specify a valid amount.');
       
